@@ -107,8 +107,21 @@ if (-not (Test-Path $settingsDir)) {
 }
 
 $settingsFile = Join-Path $settingsDir "settings.json"
+
+# Function to strip JSONC features (comments and trailing commas) for JSON parsing
+function Strip-Jsonc {
+    param([string]$Text)
+    # Remove single-line comments
+    $Text = $Text -replace '//.*$', ''
+    # Remove multi-line comments
+    $Text = $Text -replace '/\*[\s\S]*?\*/', ''
+    # Remove trailing commas before } or ]
+    $Text = $Text -replace ',\s*([}\]])', '$1'
+    return $Text
+}
+
 $newSettingsRaw = Get-Content "$scriptDir\settings.json" -Raw
-$newSettings = $newSettingsRaw | ConvertFrom-Json
+$newSettings = (Strip-Jsonc $newSettingsRaw) | ConvertFrom-Json
 
 if (Test-Path $settingsFile) {
     Write-Host "Existing settings.json found" -ForegroundColor Yellow
@@ -116,7 +129,8 @@ if (Test-Path $settingsFile) {
     Copy-Item $settingsFile "$settingsFile.backup" -Force
 
     try {
-        $existingSettings = Get-Content $settingsFile -Raw | ConvertFrom-Json
+        $existingRaw = Get-Content $settingsFile -Raw
+        $existingSettings = (Strip-Jsonc $existingRaw) | ConvertFrom-Json
 
         # Merge settings - Islands Dark settings take precedence
         $mergedSettings = @{}

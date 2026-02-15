@@ -101,8 +101,19 @@ if [ -f "$SETTINGS_FILE" ]; then
 const fs = require('fs');
 const path = require('path');
 
+// Strip JSONC features (comments and trailing commas) for JSON.parse
+function stripJsonc(text) {
+    // Remove single-line comments
+    text = text.replace(/\/\/.*$/gm, '');
+    // Remove multi-line comments
+    text = text.replace(/\/\*[\s\S]*?\*\//g, '');
+    // Remove trailing commas before } or ]
+    text = text.replace(/,\s*([}\]])/g, '$1');
+    return text;
+}
+
 const scriptDir = process.cwd();
-const newSettings = JSON.parse(fs.readFileSync(path.join(scriptDir, 'settings.json'), 'utf8'));
+const newSettings = JSON.parse(stripJsonc(fs.readFileSync(path.join(scriptDir, 'settings.json'), 'utf8')));
 
 let settingsDir;
 if (process.platform === 'darwin') {
@@ -112,7 +123,7 @@ if (process.platform === 'darwin') {
 }
 
 const settingsFile = path.join(settingsDir, 'settings.json');
-const existingSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+const existingSettings = JSON.parse(stripJsonc(fs.readFileSync(settingsFile, 'utf8')));
 
 // Merge settings - Islands Dark settings take precedence
 const mergedSettings = { ...existingSettings, ...newSettings };
